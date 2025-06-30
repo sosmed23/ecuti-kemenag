@@ -1,0 +1,93 @@
+<!-- Pembaruan: templates/profile.html -->
+<!-- Merapikan tata letak dan styling form -->
+{% extends 'base.html' %}
+
+{% block title %}Profil Saya{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-8">
+    
+    <!-- Notifikasi Pesan -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="p-4 rounded-md {% if message.tags == 'success' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Form Edit Data Pribadi -->
+    <div class="bg-white p-8 rounded-lg shadow-md">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">Data Pribadi</h2>
+        <form method="POST">
+            {% csrf_token %}
+            <div class="space-y-4">
+                <!-- Merender form u_form dan p_form secara manual -->
+                <div>
+                    <label for="{{ u_form.first_name.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ u_form.first_name.label }}</label>
+                    {{ u_form.first_name }}
+                </div>
+                <div>
+                    <label for="{{ u_form.last_name.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ u_form.last_name.label }}</label>
+                    {{ u_form.last_name }}
+                </div>
+                <div>
+                    <label for="{{ u_form.email.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ u_form.email.label }}</label>
+                    {{ u_form.email }}
+                </div>
+                <div>
+                    <label for="{{ p_form.no_telepon.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ p_form.no_telepon.label }}</label>
+                    {{ p_form.no_telepon }}
+                </div>
+            </div>
+            <div class="mt-6">
+                <button type="submit" name="update_profile" class="px-6 py-2 bg-green-700 hover:bg-green-800 text-white font-bold rounded-lg shadow-md">
+                    Simpan Perubahan Data
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Form Ubah Password -->
+    <div class="bg-white p-8 rounded-lg shadow-md">
+        <h2 class="text-2xl font-bold text-gray-500 mb-6">Ubah Password</h2>
+        <form method="POST">
+            {% csrf_token %}
+            <div class="space-y-4">
+                <!-- Merender form password secara manual untuk styling -->
+                {% for field in pass_form %}
+                <div>
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ field.label }}</label>
+                    <input type="password" name="{{ field.name }}" id="{{ field.id_for_label }}" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-300 focus:border-green-300 sm:text-sm">
+                    
+                    <!-- Menampilkan error per field -->
+                    {% if field.errors %}
+                        {% for error in field.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ error }}</p>
+                        {% endfor %}
+                    {% endif %}
+
+                    <!-- Menampilkan teks bantuan dengan font lebih kecil -->
+                    {% if field.help_text %}
+                        <div class="mt-1 text-xs text-gray-500 space-y-1">{{ field.help_text|safe }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <div class="mt-6">
+                <button type="submit" name="change_password" class="px-6 py-2 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-lg shadow-md">
+                    Ubah Password
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tombol Kembali ke Dashboard -->
+    <div class="text-center mt-8">
+        <a href="{% url 'dashboard' %}" class="text-green-700 hover:text-green-800 font-medium transition duration-300">
+            &larr; Kembali ke Dashboard
+        </a>
+    </div>
+
+</div>
+{% endblock %}

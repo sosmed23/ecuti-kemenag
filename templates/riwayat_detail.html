@@ -1,0 +1,71 @@
+<!-- File Baru: templates/riwayat_detail.html -->
+{% extends 'base.html' %}
+
+{% block title %}Detail Riwayat Cuti{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md">
+    <div class="flex justify-between items-start mb-6 border-b pb-4">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">Detail Riwayat Cuti</h2>
+            <p class="text-sm text-gray-500">Diajukan pada: {{ pengajuan.created_at|date:"d F Y, H:i" }}</p>
+        </div>
+        <div>
+            <!-- Label Status -->
+            {% if pengajuan.status == 'DISETUJUI' %}
+                <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                    Disetujui
+                </span>
+            {% elif 'DITOLAK' in pengajuan.status %}
+                <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                    Ditolak
+                </span>
+            {% else %}
+                <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                    {{ pengajuan.get_status_display }}
+                </span>
+            {% endif %}
+            <!-- === TOMBOL CETAK BARU === -->
+            {% if pengajuan.status == 'DISETUJUI' %}
+                <a href="{% url 'cetak_surat_cuti' pk=pengajuan.pk %}" target="_blank" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg text-sm">
+                Cetak PDF
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Detail Cuti -->
+    <div class="space-y-4 mb-8">
+        <div><h4 class="font-semibold text-gray-600">Jenis Cuti</h4><p>{{ pengajuan.jenis_cuti.nama }}</p></div>
+        <div><h4 class="font-semibold text-gray-600">Tanggal Cuti</h4><p>{{ pengajuan.tanggal_mulai|date:"d M Y" }} s/d {{ pengajuan.tanggal_selesai|date:"d M Y" }} ({{ pengajuan.lama_cuti }} hari)</p></div>
+        <div><h4 class="font-semibold text-gray-600">Alasan</h4><p class="whitespace-pre-wrap">{{ pengajuan.alasan }}</p></div>
+        <div><h4 class="font-semibold text-gray-600">Alamat Selama Cuti</h4><p>{{ pengajuan.alamat_selama_cuti }}</p></div>
+        <div><h4 class="font-semibold text-gray-600">No. Telp</h4><p>{{ pengajuan.telepon_selama_cuti }}</p></div>
+    </div>
+    
+    <!-- Tampilkan catatan persetujuan jika ada -->
+    {% if pengajuan.catatan_atasan or pengajuan.catatan_kepala %}
+    <div class="space-y-4">
+        <h3 class="text-xl font-bold text-gray-800 border-t pt-6">Catatan Persetujuan</h3>
+        {% if pengajuan.catatan_atasan %}
+        <div class="p-4 bg-gray-50 rounded-lg border">
+            <h4 class="font-semibold text-gray-600">Catatan dari Atasan Langsung:</h4>
+            <p class="text-gray-800 italic mt-1">"{{ pengajuan.catatan_atasan }}"</p>
+        </div>
+        {% endif %}
+        {% if pengajuan.catatan_kepala %}
+        <div class="p-4 bg-gray-50 rounded-lg border">
+            <h4 class="font-semibold text-gray-600">Catatan dari Kepala Kantor:</h4>
+            <p class="text-gray-800 italic mt-1">"{{ pengajuan.catatan_kepala }}"</p>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="mt-8 border-t pt-6">
+        <a href="{% url 'dashboard' %}" class="text-indigo-600 hover:text-indigo-800 font-medium">
+            &larr; Kembali ke Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

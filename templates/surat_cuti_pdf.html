@@ -1,0 +1,236 @@
+{% load static %}
+{% load cuti_extras %}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Formulir Permintaan dan Pemberian Cuti</title>
+    <style>
+        @page { size: A4; margin: 1.5cm; }
+        body { font-family: Arial, sans-serif; font-size: 10pt; line-height: 1.4; }
+        table { width: 100%; border-collapse: collapse; page-break-inside: avoid; }
+        td, th { border: 1px solid black; padding: 4px; vertical-align: top; }
+        
+        .header-block {
+            width: 45%;
+            float: right;
+            text-align: left;
+            margin-bottom: 20px;
+        }
+        .header-block p {
+            margin: 0;
+            line-height: 1.3;
+        }
+        .main-title {
+            text-align: center;
+            font-weight: bold;
+            text-decoration: underline;
+            margin-bottom: 25px;
+            clear: both;
+        }
+
+        .section-title { font-weight: bold; padding-left: 5px; margin-top: 8px; margin-bottom: 1px; }
+        .catatan-cuti-table td { font-size: 8pt; padding: 2px 4px; }
+        .sub-table td { border: none; }
+        
+        /* --- CSS Umum untuk Section Tanda Tangan --- */
+        .signature-section { 
+            margin-top: 5px;
+            page-break-inside: avoid;
+            position: relative; 
+        }
+
+        /* --- CSS untuk Tanda Tangan Pemohon (Bagian VI) - Kiri Rata Tengah --- */
+        .signature-block.pemohon {
+            width: 45%;
+            text-align: center; 
+            float: left; 
+            margin-left: 0; 
+            /* padding-top disesuaikan setelah menghilangkan border tabel */
+            padding-top: 30px; /* Ruang untuk tanda tangan (sekitar 2 baris teks) */
+        }
+
+        /* --- CSS untuk Tanda Tangan Atasan & Kepala (Bagian VII & VIII) - Kanan Rata Tengah --- */
+        .signature-block.approver {
+            width: 45%;
+            text-align: center; 
+            float: right; 
+            /* padding-top disesuaikan setelah menghilangkan border tabel */
+            padding-top: 30px; /* Ruang untuk tanda tangan (sekitar 2 baris teks) */
+        }
+        
+        /* Merapatkan Nama dan NIP */
+        .signature-name, .signature-nip {
+            margin: 0 !important; /* Hilangkan semua margin */
+            padding: 0 !important; /* Hilangkan semua padding */
+            line-height: 1em !important; /* Pastikan line-height sangat rapat */
+            display: block; /* Pastikan sebagai blok untuk kontrol penuh */
+        }
+        .signature-name { 
+            font-weight: normal; 
+        }
+        .signature-nip { 
+            font-size: 10pt; 
+        }
+
+        .clearfix::after { content: ""; clear: both; display: table; }
+
+        /* --- CSS BARU: Menghilangkan garis bawah tabel di atas nama/NIP --- */
+        .signature-section table {
+            border-bottom: none !important; /* Menghilangkan border bawah tabel */
+            margin-bottom: 0 !important; /* Pastikan tidak ada margin bawah tambahan */
+            /* Jarak asli 5px dari margin-bottom sebelumnya pada tabel di signature-section sudah diatur */
+        }
+
+        /* --- Jarak untuk Bagian VII --- */
+        .section-vii-spacing {
+            margin-top: 30px; 
+        }
+
+        /* --- Jarak setelah tabel persetujuan sebelum tanda tangan (jika diperlukan) --- */
+        /* Span spacer dihapus karena padding-top pada signature-block sudah menggantikan fungsinya */
+        /* .signature-table-spacer { height: 10px; display: block; } */
+
+        /* --- CSS untuk menjaga Bagian VII dan VIII dalam satu halaman --- */
+        .approval-decision-section-wrapper {
+            page-break-inside: avoid; 
+            margin-top: 15px; 
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ======================= BAGIAN KOP SURAT BARU ======================= -->
+    <div class="header-block">
+        <p>Marisa, {% now "d F Y" %}</p>
+        <p>Kepada Yth.</p>
+        <p>Kepala Kantor Kementerian Agama Kab. Pohuwato</p>
+        <p>di,</p>
+        <p style="text-indent: 1cm;">Tempat</p>
+    </div>
+    <!-- =================================================================== -->
+
+    <h4 class="main-title">FORMULIR PERMINTAAN DAN PEMBERIAN CUTI</h4>
+
+    <div class="section-title">I. DATA PEGAWAI</div>
+    <table>
+        <tr>
+            <td style="width: 15%;">Nama</td><td style="width: 45%;">{{ pengajuan.pegawai.get_full_name }}</td>
+            <td style="width: 15%;">NIP</td><td style="width: 25%;">{{ pengajuan.pegawai.nip }}</td>
+        </tr>
+        <tr>
+            <td>Jabatan</td><td>{{ pengajuan.pegawai.profile.jabatan.nama_jabatan|default:"-" }}</td>
+            <td>Masa Kerja</td><td>{{ pengajuan.pegawai.profile.masa_kerja_tahun }} Tahun {{ pengajuan.pegawai.profile.masa_kerja_bulan }} Bulan</td>
+        </tr>
+        <tr>
+            <td>Unit Kerja</td><td colspan="3">Kantor Kementerian Agama Kabupaten Pohuwato</td>
+        </tr>
+    </table>
+
+    <div class="section-title">II. JENIS CUTI YANG DIAMBIL</div>
+    <table>
+        <tr>
+            <td style="width: 50%;">1. Cuti Tahunan {% if pengajuan.jenis_cuti.kode == 'CT' %} <span style="font-family: DejaVu Sans;">✓</span>{% endif %}</td>
+            <td style="width: 50%;">2. Cuti Besar {% if pengajuan.jenis_cuti.kode == 'CB' %} <span style="font-family: DejaVu Sans;">✓</span>{% endif %}</td>
+        </tr>
+        <tr><td>3. Cuti Sakit {% if pengajuan.jenis_cuti.kode == 'CS' %} <span style="font-family: DejaVu Sans;">✓</span>{% endif %}</td><td>4. Cuti Melahirkan {% if pengajuan.jenis_cuti.kode == 'CM' %} <span style="font-family: DejaVu Sans;">✓</span>{% endif %}</td></tr>
+        <tr><td>5. Cuti Karena Alasan Penting {% if pengajuan.jenis_cuti.kode == 'CAP' %} <span style="font-family: DejaVu Sans;">✓</span>{% endif %}</td><td>6. Cuti di Luar Tanggungan Negara {% if pengajuan.jenis_cuti.kode == 'CLTN' %} <span style="font-family: DejaVu Sans;">✓</span>{% endif %}</td></tr>
+    </table>
+    
+    <div class="section-title">III. ALASAN CUTI</div>
+    <table><tr><td style="height: 40px;">{{ pengajuan.alasan }}</td></tr></table>
+
+    <div class="section-title">IV. LAMANYA CUTI</div>
+    <table>
+        <tr>
+            <td style="width: 15%;">Selama</td>
+            <td style="width: 35%;">{{ pengajuan.lama_cuti }} ({{ pengajuan.lama_cuti|terbilang }}) hari kerja</td>
+            <td style="width: 20%;">Mulai Tanggal</td>
+            <td style="width: 30%;">{{ pengajuan.tanggal_mulai|date:"d F Y" }} s/d {{ pengajuan.tanggal_selesai|date:"d F Y" }}</td>
+        </tr>
+    </table>
+    
+    <div class="section-title">V. CATATAN CUTI</div>
+    <table class="catatan-cuti-table">
+        <tr>
+            <td style="width: 50%;" colspan="3">
+                <table class="sub-table catatan-cuti-table">
+                    <tr><td class="font-bold" colspan="3">1. Cuti Tahunan</td></tr>
+                    <tr><td style="width: 33%;">Tahun</td><td style="width: 33%;">Sisa</td><td style="width: 34%;">Keterangan</td></tr>
+                    <tr><td>N-2</td><td>{{ sisa_cuti.n_2.sisa_hari|default:"-" }}</td><td></td></tr>
+                    <tr><td>N-1</td><td>{{ sisa_cuti.n_1.sisa_hari|default:"-" }}</td><td>{{ tahun_sekarang|add:"-1" }}</td></tr>
+                    <tr><td>N</td><td>{{ sisa_cuti.n.sisa_hari|default:"-" }}</td><td>{{ tahun_sekarang }}</td></tr>
+                </table>
+            </td>
+            <td style="width: 50%;">
+                <table class="sub-table catatan-cuti-table">
+                    <tr><td>2. CUTI BESAR</td></tr>
+                    <tr><td>3. CUTI SAKIT</td></tr>
+                    <tr><td>4. CUTI MELAHIRKAN</td></tr>
+                    <tr><td>5. CUTI KARENA ALASAN PENTING</td></tr>
+                    <tr><td>6. CUTI DI LUAR TANGGUNGAN NEGARA</td></tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- ======================= BAGIAN TANDA TANGAN PEMOHON (DIKIRI) ======================= -->
+    <div class="signature-section">
+        <div class="section-title">VI. ALAMAT SELAMA MENJALANKAN CUTI</div>
+        <table style="margin-bottom: 5px;">
+            <tr><td style="height: 60px;">
+                <p style="margin: 0 0 5px 0;">{{ pengajuan.alamat_selama_cuti }}</p>
+                <p style="margin: 0;">Nomor yang bisa dihubungi: {{ pengajuan.telepon_selama_cuti }}</p>
+            </td></tr>
+        </table>
+        <div class="signature-block pemohon"> 
+            <p>Hormat Saya,</p>
+            <p class="signature-name">{{ pengajuan.pegawai.get_full_name }}</p><p class="signature-nip">NIP. {{ pengajuan.pegawai.nip }}</p>
+        </div>
+        <div class="clearfix"></div>
+    </div>
+    
+    <!-- ======================= WRAPPER untuk Bagian VII dan VIII ======================= -->
+    <div class="approval-decision-section-wrapper">
+        <!-- ======================= BAGIAN VII. PERTIMBANGAN ATASAN LANGSUNG ======================= -->
+        <div class="signature-section section-vii-spacing"> 
+            <div class="section-title">VII. PERTIMBANGAN ATASAN LANGSUNG</div>
+            <table> {# Dihilangkan style="margin-bottom: 5px;" karena akan ditangani oleh CSS baru #}
+                <tr>
+                    <td class="text-center" style="width: 25%;">DISETUJUI</td>
+                    <td class="text-center" style="width: 25%;">PERUBAHAN</td>
+                    <td class="text-center" style="width: 25%;">DITANGGUHKAN</td>
+                    <td class="text-center" style="width: 25%;">TIDAK DISETUJUI</td>
+                </tr>
+                <tr><td colspan="4" style="height: 60px;">&nbsp;</td></tr> 
+            </table>
+            {# <span class="signature-table-spacer"></span> dihapus #}
+            <div class="signature-block approver"> 
+                <p class="signature-name">{{ pengajuan.atasan_penyetuju.get_full_name|default_if_none:"....................................." }}</p><p class="signature-nip">NIP. {{ pengajuan.atasan_penyetuju.nip|default_if_none:"....................................." }}</p>
+            </div>
+            <div class="clearfix"></div>
+        </div>
+
+        <!-- ======================= BAGIAN VIII. KEPUTUSAN PEJABAT YANG BERWENANG MEMBERIKAN CUTI ======================= -->
+        <div class="signature-section" style="margin-top: 15px;">
+            <div class="section-title">VIII. KEPUTUSAN PEJABAT YANG BERWENANG MEMBERIKAN CUTI</div>
+            <table> {# Dihilangkan style="margin-bottom: 5px;" karena akan ditangani oleh CSS baru #}
+                <tr>
+                    <td class="text-center" style="width: 25%;">DISETUJUI</td>
+                    <td class="text-center" style="width: 25%;">PERUBAHAN</td>
+                    <td class="text-center" style="width: 25%;">DITANGGUHKAN</td>
+                    <td class="text-center" style="width: 25%;">TIDAK DISETUJUI</td>
+                </tr>
+                <tr><td colspan="4" style="height: 60px;">&nbsp;</td></tr> 
+            </table>
+            {# <span class="signature-table-spacer"></span> dihapus #}
+            <div class="signature-block approver"> 
+                <p class="signature-name">{{ pengajuan.kepala_penyetuju.get_full_name|default_if_none:"....................................." }}</p><p class="signature-nip">NIP. {{ pengajuan.kepala_penyetuju.nip|default_if_none:"....................................." }}</p>
+            </div>
+            <div class="clearfix"></div>
+        </div>
+    </div>
+    
+</body>
+</html>

@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}Formulir Pengajuan Cuti{% endblock %}
+
+{% block content %}
+<div class="bg-white p-8 rounded-xl shadow-lg">
+    <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">Formulir Pengajuan Cuti</h2>
+
+    <form id="cuti-form" method="post" enctype="multipart/form-data" class="space-y-6">
+        {% csrf_token %}
+        
+        <!-- Render field secara manual untuk kontrol penuh -->
+        <div>
+            <label for="{{ form.jenis_cuti.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ form.jenis_cuti.label }}</label>
+            {{ form.jenis_cuti }}
+        </div>
+        <div>
+            <label for="{{ form.tanggal_mulai.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ form.tanggal_mulai.label }}</label>
+            {{ form.tanggal_mulai }}
+        </div>
+        <div>
+            <label for="{{ form.tanggal_selesai.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ form.tanggal_selesai.label }}</label>
+            {{ form.tanggal_selesai }}
+        </div>
+        <div>
+            <label for="{{ form.alasan.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ form.alasan.label }}</label>
+            {{ form.alasan }}
+        </div>
+        <div>
+            <label for="{{ form.dokumen_pendukung.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ form.dokumen_pendukung.label }}</label>
+            {{ form.dokumen_pendukung }}
+        </div>
+        <div>
+            <label for="{{ form.alamat_selama_cuti.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ form.alamat_selama_cuti.label }}</label>
+            {{ form.alamat_selama_cuti }}
+        </div>
+        <div>
+            <label for="{{ form.telepon_selama_cuti.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ form.telepon_selama_cuti.label }}</label>
+            {{ form.telepon_selama_cuti }}
+        </div>
+
+               
+        <!-- Bagian untuk menampilkan lama cuti -->
+        <div class="p-4 bg-gray-50 border rounded-md">
+            <p class="font-medium text-gray-700">Perkiraan Lama Cuti Efektif: 
+                <span id="lama-cuti-display" class="font-bold text-lg text-green-700">0</span> hari kerja
+            </p>
+            <p class="text-xs text-gray-500 mt-1">*Tidak termasuk hari Sabtu, Minggu, dan hari libur.</p>
+        </div>
+
+        <div class="pt-6">
+            <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-white bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-600">
+                Kirim Pengajuan
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Script untuk Signature Pad -->
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const canvas = document.getElementById('signature-pad');
+        const signaturePad = new SignaturePad(canvas, {
+            backgroundColor: 'rgb(255, 255, 255)'
+        });
+
+        const clearButton = document.getElementById('clear-signature');
+        clearButton.addEventListener('click', function() {
+            signaturePad.clear();
+        });
+
+        const form = document.getElementById('cuti-form');
+        const signatureField = document.getElementById('id_tanda_tangan_pegawai');
+        
+        form.addEventListener('submit', function(event) {
+            if (!signaturePad.isEmpty()) {
+                signatureField.value = signaturePad.toDataURL('image/png');
+            }
+        });
+
+        const startDateInput = document.getElementById('id_tanggal_mulai');
+        const endDateInput = document.getElementById('id_tanggal_selesai');
+        const displayElement = document.getElementById('lama-cuti-display');
+
+        function updateLamaCuti() {
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
+
+            if (startDate && endDate) {
+                const url = `/cuti/ajax/hitung-cuti/?start_date=${startDate}&end_date=${endDate}`;
+                
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        displayElement.textContent = data.lama_cuti || 0;
+                    })
+                    .catch(error => console.error('Error:', error));
+            }
+        }
+        
+        if (startDateInput && endDateInput) {
+            startDateInput.addEventListener('change', updateLamaCuti);
+            endDateInput.addEventListener('change', updateLamaCuti);
+        }
+    });
+</script>
+{% endblock %}

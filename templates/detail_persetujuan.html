@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Detail Pengajuan Cuti{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md">
+    <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">
+        Detail Pengajuan Cuti {% if peran == 'Kepala' %}(Keputusan Final){% endif %}
+    </h2>
+
+    <!-- Informasi Pegawai -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6"><div><h4 class="font-semibold text-gray-600">Nama Pegawai</h4><p>{{ pengajuan.pegawai.get_full_name }}</p></div><div><h4 class="font-semibold text-gray-600">NIP</h4><p>{{ pengajuan.pegawai.nip }}</p></div></div>
+    
+    <!-- Detail Cuti -->
+    <div class="space-y-4 mb-8"><div><h4 class="font-semibold text-gray-600">Jenis Cuti</h4><p>{{ pengajuan.jenis_cuti.nama }}</p></div><div><h4 class="font-semibold text-gray-600">Tanggal Cuti</h4><p>{{ pengajuan.tanggal_mulai|date:"d M Y" }} s/d {{ pengajuan.tanggal_selesai|date:"d M Y" }} ({{ pengajuan.lama_cuti }} hari)</p></div><div><h4 class="font-semibold text-gray-600">Alasan</h4><p class="whitespace-pre-wrap">{{ pengajuan.alasan }}</p></div><div><h4 class="font-semibold text-gray-600">Alamat Selama Cuti</h4><p>{{ pengajuan.alamat_selama_cuti }}</p></div><div><h4 class="font-semibold text-gray-600">No. Telp</h4><p>{{ pengajuan.telepon_selama_cuti }}</p></div></div>
+    
+    <!-- Tampilkan catatan dari atasan langsung jika ada -->
+    {% if pengajuan.catatan_atasan %}
+    <div class="mb-8 p-4 bg-gray-50 rounded-lg border">
+        <h4 class="font-semibold text-gray-600">Catatan dari Atasan Langsung:</h4>
+        <p class="text-gray-800 italic">"{{ pengajuan.catatan_atasan }}"</p>
+    </div>
+    {% endif %}
+
+    <!-- Formulir Aksi Persetujuan -->
+    <h3 class="text-xl font-bold text-gray-800 mb-4 border-t pt-6">Tindakan Persetujuan</h3>
+    
+    {% if peran == 'Kepala' %}
+        <!-- Formulir untuk Kepala -->
+        <form action="{% url 'proses_persetujuan_kepala' pk=pengajuan.pk %}" method="post">
+            {% csrf_token %}
+            <div><label for="catatan_kepala" class="block text-sm font-medium text-gray-700">Catatan (Opsional)</label><textarea name="catatan_kepala" id="catatan_kepala" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></textarea></div>
+            <div class="mt-6 flex justify-end space-x-4"><button type="submit" name="aksi" value="tolak" class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg">Tolak Final</button><button type="submit" name="aksi" value="setujui" class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg">Setujui Final</button></div>
+        </form>
+    {% else %}
+        <!-- Formulir untuk Atasan Langsung -->
+        <form action="{% url 'proses_persetujuan' pk=pengajuan.pk %}" method="post">
+            {% csrf_token %}
+            <div><label for="catatan_atasan" class="block text-sm font-medium text-gray-700">Catatan (Opsional)</label><textarea name="catatan_atasan" id="catatan_atasan" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></textarea></div>
+            <div class="mt-6 flex justify-end space-x-4"><button type="submit" name="aksi" value="tolak" class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg">Tolak</button><button type="submit" name="aksi" value="setujui" class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg">Setujui & Teruskan</button></div>
+        </form>
+    {% endif %}
+</div>
+{% endblock %}
