@@ -11,21 +11,19 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 # Ambil SECRET_KEY dari environment variable.
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 
-# DEBUG akan 'False' saat di-deploy di Render, dan 'True' saat di lokal.
-DEBUG = os.environ.get('RENDER') != 'True'
+# DEBUG akan 'False' saat di-deploy di Heroku.
+# Heroku tidak mengatur variabel DEVELOPMENT, jadi ini akan menjadi False saat online.
+DEBUG = 'DEVELOPMENT' in os.environ
 
-# Daftar domain yang diizinkan. Render akan menyediakan domainnya.
-ALLOWED_HOSTS = []
-RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
-if RENDER_EXTERNAL_HOSTNAME:
-    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+# Daftar domain yang diizinkan.
+ALLOWED_HOSTS = ['127.0.0.1']
+HEROKU_APP_NAME = os.environ.get('HEROKU_APP_NAME')
+if HEROKU_APP_NAME:
+    ALLOWED_HOSTS.append(f"{HEROKU_APP_NAME}.herokuapp.com")
 
-# Untuk development lokal
-if not RENDER_EXTERNAL_HOSTNAME:
-    ALLOWED_HOSTS.append('127.0.0.1')
 
 INSTALLED_APPS = [
-    'whitenoise.runserver_nostatic', # Harus di paling atas
+    'whitenoise.runserver_nostatic',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -39,7 +37,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', # Tambahkan ini
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
