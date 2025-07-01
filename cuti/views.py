@@ -7,7 +7,6 @@ from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from django.template.loader import get_template
 from datetime import datetime
-from xhtml2pdf import pisa
 
 # --- IMPORT UNTUK PROSES TANDA TANGAN ---
 import base64
@@ -155,7 +154,8 @@ def konfirmasi_pengajuan(request):
     }
     return render(request, 'konfirmasi_pengajuan.html', context)
 
-# ==================== VIEW UNTUK PERSETUJUAN (TETAP SAMA) ====================
+
+# ==================== VIEW LAINNYA ====================
 
 @login_required
 def daftar_persetujuan(request):
@@ -173,6 +173,7 @@ def detail_persetujuan(request, pk):
 def proses_persetujuan(request, pk):
     if request.method != 'POST':
         return redirect('dashboard')
+    
     pengajuan = get_object_or_404(PengajuanCuti, pk=pk, atasan_penyetuju=request.user)
     aksi = request.POST.get('aksi')
     catatan = request.POST.get('catatan_atasan', '')
@@ -242,20 +243,28 @@ def riwayat_detail(request, pk):
 @login_required
 def cetak_surat_cuti(request, pk):
     pengajuan = get_object_or_404(PengajuanCuti, pk=pk, status='DISETUJUI')
-    # Logika otorisasi untuk cetak surat
-    # ...
-    context = {'pengajuan': pengajuan} # Sesuaikan konteks sesuai kebutuhan template PDF
-    template_path = 'surat_cuti_pdf.html'
-    template = get_template(template_path)
-    html = template.render(context)
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'filename="surat_cuti_{pengajuan.pegawai.nip}.pdf"'
-    pisa_status = pisa.CreatePDF(html, dest=response)
-    if pisa_status.err:
-       return HttpResponse('Terjadi kesalahan saat membuat PDF <pre>' + html + '</pre>')
-    return response
+    is_pemilik = pengajuan.pegawai == request.user
+    is_atasan = pengajuan.atasan_penyetuju == request.user if pengajuan.atasan_penyetuju else False
+    is_kepala = request.user.groups.filter(name='Kepala Kantor').exists()
 
-# View untuk AJAX
+    if not (is_pemilik or is_atasan or is_kepala):
+        messages.error(request, "Anda tidak memiliki izin untuk mengakses dokumen ini.")
+        return redirect('dashboard')
+        
+    tahun_sekarang = timezone.now().year
+    sisa_cuti = {
+        'n': SaldoCutiTahunan.objects.filter(pegawai=pengajuan.pegawai, tahun=tahun_sekarang).first(),
+        'n_1': SaldoCutiTahunan.objects.filter(pegawai=pengajuan.pegawai, tahun=tahun_sekarang - 1).first(),
+        'n_2': SaldoCutiTahunan.objects.filter(pegawai=pengajuan.pegawai, tahun=tahun_sekarang - 2).first(),
+    }
+    context = {
+        'pengajuan': pengajuan, 
+        'sisa_cuti': sisa_cuti, 
+        'tahun_sekarang': tahun_sekarang
+    }
+    
+    return render(request, 'cetak_surat_cuti.html', context)
+
 def hitung_lama_cuti_ajax(request):
     start_date_str = request.GET.get('start_date')
     end_date_str = request.GET.get('end_date')

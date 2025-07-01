@@ -1,1 +1,0 @@
-web: gunicorn kemenag_pohuwato_cuti.wsgi --log-file -

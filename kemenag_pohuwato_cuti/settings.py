@@ -5,62 +5,41 @@ import os
 import dj_database_url
 from dotenv import load_dotenv
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-# Muat environment variables dari file .env (berguna saat development lokal)
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
-
-# ==============================================================================
-# PENGATURAN KUNCI UNTUK PRODUKSI & DEVELOPMENT
-# ==============================================================================
-
-# Ambil SECRET_KEY dari environment variable. JANGAN TULIS LANGSUNG DI SINI.
+# Ambil SECRET_KEY dari environment variable.
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 
-# DEBUG akan 'False' saat di-deploy di Railway, dan 'True' saat di lokal.
-# Railway mengatur variabel RAILWAY_ENVIRONMENT menjadi 'production' saat deploy.
-DEBUG = os.environ.get('RAILWAY_ENVIRONMENT') != 'production'
+# DEBUG akan 'False' saat di-deploy di Render, dan 'True' saat di lokal.
+DEBUG = os.environ.get('RENDER') != 'True'
 
-# Daftar domain yang diizinkan untuk mengakses aplikasi Anda.
+# Daftar domain yang diizinkan. Render akan menyediakan domainnya.
 ALLOWED_HOSTS = []
-RAILWAY_PUBLIC_DOMAIN = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
-if RAILWAY_PUBLIC_DOMAIN:
-    ALLOWED_HOSTS.append(RAILWAY_PUBLIC_DOMAIN)
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
-# Untuk development, tambahkan host lokal.
-if DEBUG:
+# Untuk development lokal
+if not RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append('127.0.0.1')
-    ALLOWED_HOSTS.append('localhost')
-
-
-# ==============================================================================
-# APPLICATION DEFINITION
-# ==============================================================================
 
 INSTALLED_APPS = [
-    # Tambahkan 'whitenoise.runserver_nostatic' di paling atas.
-    'whitenoise.runserver_nostatic',
+    'whitenoise.runserver_nostatic', # Harus di paling atas
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
-    # Aplikasi Anda (sesuaikan jika namanya berbeda)
+    # Aplikasi Anda
     'users.apps.UsersConfig',
     'cuti.apps.CutiConfig',
-
-    # Library pihak ketiga jika ada
-    # 'crispy_forms',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    # Tambahkan Middleware Whitenoise setelah SecurityMiddleware.
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', # Tambahkan ini
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -69,7 +48,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# Ganti 'kemenag_pohuwato_cuti' dengan nama folder proyek utama Anda.
 ROOT_URLCONF = 'kemenag_pohuwato_cuti.urls'
 
 TEMPLATES = [
@@ -88,28 +66,15 @@ TEMPLATES = [
     },
 ]
 
-# Ganti 'kemenag_pohuwato_cuti' dengan nama folder proyek utama Anda.
 WSGI_APPLICATION = 'kemenag_pohuwato_cuti.wsgi.application'
 
-
-# ==============================================================================
-# DATABASE
-# ==============================================================================
-
-# Konfigurasi ini akan menggunakan DATABASE_URL dari Railway saat online,
-# dan SQLite di komputer lokal jika variabel tersebut tidak ditemukan.
+# Konfigurasi Database
 DATABASES = {
     'default': dj_database_url.config(
         default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
-        conn_max_age=600,
-        conn_health_checks=True,
+        conn_max_age=600
     )
 }
-
-
-# ==============================================================================
-# PASSWORD VALIDATION
-# ==============================================================================
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',},
@@ -118,44 +83,20 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',},
 ]
 
-# Jika Anda menggunakan custom User model:
 AUTH_USER_MODEL = 'users.User'
 
-
-# ==============================================================================
-# INTERNATIONALIZATION
-# ==============================================================================
-
-LANGUAGE_CODE = 'id-id'  # Bahasa Indonesia
-TIME_ZONE = 'Asia/Makassar' # Waktu Indonesia Tengah (WITA)
+LANGUAGE_CODE = 'id-id'
+TIME_ZONE = 'Asia/Makassar'
 USE_I18N = True
 USE_TZ = True
 
-
-# ==============================================================================
-# STATIC & MEDIA FILES (PENTING UNTUK PRODUKSI)
-# ==============================================================================
-
-# URL untuk mengakses file statis (CSS, JavaScript, Images)
+# Pengaturan File Statis & Media
 STATIC_URL = '/static/'
-# Folder tempat `collectstatic` akan mengumpulkan semua file statis.
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-# Penyimpanan file statis untuk Whitenoise (sangat efisien)
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-# Lokasi tambahan untuk file statis Anda (jika ada)
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
-
-# URL untuk mengakses file media yang di-upload pengguna (Tanda Tangan, Dokumen)
 MEDIA_URL = '/media/'
-# Folder tempat file media akan disimpan di lokal.
-# PERHATIAN: Di Railway, file lokal ini bersifat sementara. Untuk produksi serius,
-# disarankan menggunakan layanan seperti AWS S3 atau Cloudinary.
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
-
-# ==============================================================================
-# DEFAULT PRIMARY KEY FIELD TYPE
-# ==============================================================================
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
