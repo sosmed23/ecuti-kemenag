@@ -40,7 +40,6 @@
             {{ form.telepon_selama_cuti }}
         </div>
 
-               
         <!-- Bagian untuk menampilkan lama cuti -->
         <div class="p-4 bg-gray-50 border rounded-md">
             <p class="font-medium text-gray-700">Perkiraan Lama Cuti Efektif: 
@@ -48,6 +47,29 @@
             </p>
             <p class="text-xs text-gray-500 mt-1">*Tidak termasuk hari Sabtu, Minggu, dan hari libur.</p>
         </div>
+
+        <!-- ======================================================= -->
+        <!-- === BAGIAN TANDA TANGAN DITAMBAHKAN DI SINI === -->
+        <!-- ======================================================= -->
+        <div class="mt-8 pt-6 border-t">
+            <label class="block text-lg font-semibold text-gray-700">Tanda Tangan Pemohon</label>
+            <p class="text-sm text-gray-500 mb-2">Mohon bubuhkan tanda tangan Anda pada area di bawah ini.</p>
+            
+            <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg">
+                <canvas id="signature-canvas" class="w-full h-48 cursor-crosshair"></canvas>
+            </div>
+
+            <div id="signature-error" class="text-red-600 text-sm mt-2 font-bold hidden"></div>
+
+            <div class="flex items-center justify-end mt-2">
+                <button type="button" id="clear-button" class="text-sm font-medium text-blue-600 hover:text-blue-800 transition duration-150">
+                    <i class="fas fa-eraser mr-1"></i> Bersihkan
+                </button>
+            </div>
+        </div>
+        <!-- Hidden input untuk menyimpan data gambar base64 -->
+        <input type="hidden" name="tanda_tangan_pemohon_data" id="tanda_tangan_data">
+        <!-- ======================================================= -->
 
         <div class="pt-6">
             <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-white bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-600">
@@ -57,29 +79,52 @@
     </form>
 </div>
 
-<!-- Script untuk Signature Pad -->
+<!-- ======================================================= -->
+<!-- === SCRIPT DIPERBARUI TOTAL === -->
+<!-- ======================================================= -->
+<!-- Muat library signature_pad.js -->
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const canvas = document.getElementById('signature-pad');
+        // --- LOGIKA UNTUK TANDA TANGAN ---
+        const canvas = document.getElementById('signature-canvas');
         const signaturePad = new SignaturePad(canvas, {
-            backgroundColor: 'rgb(255, 255, 255)'
+            backgroundColor: 'rgb(249, 250, 251)' // Warna bg-gray-50
         });
 
-        const clearButton = document.getElementById('clear-signature');
-        clearButton.addEventListener('click', function() {
+        function resizeCanvas() {
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+            canvas.width = canvas.offsetWidth * ratio;
+            canvas.height = canvas.offsetHeight * ratio;
+            canvas.getContext("2d").scale(ratio, ratio);
             signaturePad.clear();
+        }
+        window.addEventListener("resize", resizeCanvas);
+        resizeCanvas();
+
+        const clearButton = document.getElementById('clear-button');
+        const form = document.getElementById('cuti-form');
+        const signatureDataInput = document.getElementById('tanda_tangan_data');
+        const signatureError = document.getElementById('signature-error');
+
+        clearButton.addEventListener('click', () => {
+            signaturePad.clear();
+            signatureError.classList.add('hidden');
         });
 
-        const form = document.getElementById('cuti-form');
-        const signatureField = document.getElementById('id_tanda_tangan_pegawai');
-        
         form.addEventListener('submit', function(event) {
-            if (!signaturePad.isEmpty()) {
-                signatureField.value = signaturePad.toDataURL('image/png');
+            if (signaturePad.isEmpty()) {
+                event.preventDefault();
+                signatureError.textContent = "Tanda tangan wajib dibubuhkan untuk melanjutkan.";
+                signatureError.classList.remove('hidden');
+            } else {
+                signatureError.classList.add('hidden');
+                const dataURL = signaturePad.toDataURL("image/png");
+                signatureDataInput.value = dataURL;
             }
         });
 
+        // --- LOGIKA UNTUK MENGHITUNG LAMA CUTI (KODE ANDA) ---
         const startDateInput = document.getElementById('id_tanggal_mulai');
         const endDateInput = document.getElementById('id_tanggal_selesai');
         const displayElement = document.getElementById('lama-cuti-display');
