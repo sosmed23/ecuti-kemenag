@@ -9,6 +9,7 @@ from django.template.loader import get_template
 from datetime import datetime
 import base64
 from django.core.files.base import ContentFile
+from django.db.models import Subquery, OuterRef
 
 from .forms import PengajuanCutiForm
 from .models import PengajuanCuti, SaldoCutiTahunan, HariLibur, JenisCuti
@@ -278,3 +279,43 @@ def hitung_lama_cuti_ajax(request):
         except (ValueError, TypeError):
             return JsonResponse({'lama_cuti': 0})
     return JsonResponse({'lama_cuti': 0})
+
+@login_required
+def laporan_cuti(request):
+    # Mulai dengan mengambil semua objek pengajuan
+    pengajuan_list = PengajuanCuti.objects.all().select_related('pegawai', 'jenis_cuti')
+
+    # --- Filter berdasarkan input dari form GET ---
+    pegawai_id = request.GET.get('pegawai', '') # Gunakan '' sebagai default
+    jenis_cuti_id = request.GET.get('jenis_cuti', '')
+    start_date = request.GET.get('start_date', '')
+    end_date = request.GET.get('end_date', '')
+
+    # Hanya jalankan filter jika ada nilainya (tidak kosong)
+    if pegawai_id:
+        pengajuan_list = pengajuan_list.filter(pegawai_id=pegawai_id)
+    if jenis_cuti_id:
+        pengajuan_list = pengajuan_list.filter(jenis_cuti_id=jenis_cuti_id)
+    if start_date:
+        pengajuan_list = pengajuan_list.filter(tanggal_mulai__gte=start_date)
+    if end_date:
+        pengajuan_list = pengajuan_list.filter(tanggal_selesai__lte=end_date)
+    
+    # Menambahkan data sisa cuti ke setiap pengajuan
+    tahun_sekarang = timezone.now().year
+    sisa_cuti_subquery = SaldoCutiTahunan.objects.filter(
+        pegawai=OuterRef('pegawai'),
+        tahun=tahun_sekarang
+    ).values('sisa_hari')[:1]
+
+    pengajuan_list = pengajuan_list.annotate(
+        sisa_cuti_tahunan=Subquery(sisa_cuti_subquery)
+    )
+
+    context = {
+        'semua_pengajuan': pengajuan_list,
+        'semua_pegawai': User.objects.all(),
+        'semua_jenis_cuti': JenisCuti.objects.all(),
+        'active_page': 'laporan'
+    }
+    return render(request, 'laporan_cuti.html', context)
