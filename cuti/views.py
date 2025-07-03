@@ -7,19 +7,18 @@ from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from django.template.loader import get_template
 from datetime import datetime
-
-# --- IMPORT UNTUK PROSES TANDA TANGAN ---
 import base64
 from django.core.files.base import ContentFile
-# ----------------------------------------
 
 from .forms import PengajuanCutiForm
 from .models import PengajuanCuti, SaldoCutiTahunan, HariLibur, JenisCuti
 from users.models import Profile, User 
 from .utils import hitung_hari_kerja
 
-# ==================== FUNGSI BANTUAN PEMOTONGAN SALDO ====================
+# ==================== FUNGSI BANTUAN ====================
+
 def potong_saldo_cuti_tahunan(pegawai, lama_cuti_diminta):
+    """Mengurangi saldo cuti tahunan dari tahun-tahun sebelumnya terlebih dahulu."""
     sisa_cuti_untuk_dipotong = lama_cuti_diminta
     tahun_sekarang = timezone.now().year
     tahun_prioritas = [tahun_sekarang - 2, tahun_sekarang - 1, tahun_sekarang]
@@ -42,8 +41,8 @@ def potong_saldo_cuti_tahunan(pegawai, lama_cuti_diminta):
     else:
         return True, "Pengurangan berhasil: " + ", ".join(pesan_log) + "."
 
-# ==================== DECORATOR OTORISASI ====================
 def kepala_kantor_required(function):
+    """Decorator untuk memastikan hanya user dalam grup 'Kepala Kantor' yang bisa mengakses view."""
     def wrap(request, *args, **kwargs):
         if request.user.groups.filter(name='Kepala Kantor').exists():
             return function(request, *args, **kwargs)
@@ -52,14 +51,15 @@ def kepala_kantor_required(function):
             return redirect('dashboard')
     return wrap
 
-# ==================== LANGKAH 1: ISI FORMULIR ====================
+# ==================== ALUR PENGAJUAN CUTI OLEH PEGAWAI ====================
+
 @login_required
 def ajukan_cuti(request):
-    """Hanya menangani pengisian form awal dan menyimpannya di session."""
+    """Langkah 1: Menampilkan dan memproses form pengajuan cuti awal."""
     if request.method == 'POST':
         form = PengajuanCutiForm(request.POST, request.FILES, request=request)
         if form.is_valid():
-            # Jangan simpan ke database dulu. Simpan datanya di session.
+            # Simpan data sementara di session, jangan simpan ke database dulu
             request.session['pengajuan_data'] = {
                 'jenis_cuti_id': form.cleaned_data['jenis_cuti'].id,
                 'tanggal_mulai': form.cleaned_data['tanggal_mulai'].isoformat(),
@@ -68,29 +68,21 @@ def ajukan_cuti(request):
                 'alamat_selama_cuti': form.cleaned_data['alamat_selama_cuti'],
                 'telepon_selama_cuti': form.cleaned_data['telepon_selama_cuti'],
             }
-            # Redirect ke halaman konfirmasi
             return redirect('konfirmasi_pengajuan')
     else:
         form = PengajuanCutiForm(request=request)
 
-    context = {
-        'form': form,
-        'active_page': 'ajukan_cuti'
-    }
+    context = {'form': form, 'active_page': 'ajukan_cuti'}
     return render(request, 'pengajuan_cuti.html', context)
 
-# ==================== LANGKAH 2: KONFIRMASI & TANDA TANGAN ====================
 @login_required
 def konfirmasi_pengajuan(request):
-    """Menampilkan ringkasan dan memproses tanda tangan."""
+    """Langkah 2: Menampilkan ringkasan data dan memproses konfirmasi dengan tanda tangan."""
     pengajuan_data = request.session.get('pengajuan_data')
-
-    # Jika tidak ada data di session, kembalikan ke form awal
     if not pengajuan_data:
-        messages.error(request, "Silakan isi formulir pengajuan terlebih dahulu.")
+        messages.error(request, "Sesi pengajuan tidak ditemukan. Silakan isi formulir kembali.")
         return redirect('ajukan_cuti')
 
-    # Ambil detail jenis cuti untuk ditampilkan
     jenis_cuti = get_object_or_404(JenisCuti, id=pengajuan_data['jenis_cuti_id'])
     pengajuan_data['jenis_cuti_nama'] = jenis_cuti.nama
     pengajuan_data['lama_cuti'] = hitung_hari_kerja(
@@ -99,13 +91,11 @@ def konfirmasi_pengajuan(request):
     )
 
     if request.method == 'POST':
-        # --- PROSES TANDA TANGAN PEMOHON ---
         tanda_tangan_data_url = request.POST.get('tanda_tangan_pemohon_data')
         if not tanda_tangan_data_url:
             messages.error(request, "Tanda tangan wajib dibubuhkan untuk konfirmasi.")
             return render(request, 'konfirmasi_pengajuan.html', {'data': pengajuan_data})
 
-        # Buat objek PengajuanCuti di database
         pengajuan = PengajuanCuti(
             pegawai=request.user,
             jenis_cuti=jenis_cuti,
@@ -117,7 +107,6 @@ def konfirmasi_pengajuan(request):
             lama_cuti=pengajuan_data['lama_cuti']
         )
         
-        # Proses dan simpan file gambar tanda tangan
         try:
             format, imgstr = tanda_tangan_data_url.split(';base64,')
             ext = format.split('/')[-1]
@@ -128,7 +117,6 @@ def konfirmasi_pengajuan(request):
             messages.error(request, 'Data tanda tangan tidak valid.')
             return render(request, 'konfirmasi_pengajuan.html', {'data': pengajuan_data})
 
-        # Tentukan status alur persetujuan
         try:
             profile_pegawai = Profile.objects.get(user=request.user)
             if profile_pegawai.atasan_langsung:
@@ -141,39 +129,34 @@ def konfirmasi_pengajuan(request):
 
         pengajuan.save()
         
-        # Hapus data dari session setelah berhasil
         if 'pengajuan_data' in request.session:
             del request.session['pengajuan_data']
 
         messages.success(request, 'Pengajuan cuti Anda telah berhasil dikirim dan ditandatangani!')
         return redirect('dashboard')
 
-    context = {
-        'data': pengajuan_data,
-        'active_page': 'ajukan_cuti'
-    }
+    context = {'data': pengajuan_data, 'active_page': 'ajukan_cuti'}
     return render(request, 'konfirmasi_pengajuan.html', context)
 
-
-# ==================== VIEW PERSETUJUAN ATASAN ====================
+# ==================== ALUR PERSETUJUAN ATASAN ====================
 
 @login_required
 def daftar_persetujuan(request):
+    """Menampilkan daftar pengajuan yang menunggu persetujuan atasan yang sedang login."""
     daftar_tugas = PengajuanCuti.objects.filter(atasan_penyetuju=request.user, status='PENDING_ATASAN').order_by('created_at')
-    context = {
-        'daftar_tugas': daftar_tugas,
-        'judul_halaman': 'Persetujuan Atasan Langsung'
-    }
+    context = {'daftar_tugas': daftar_tugas, 'judul_halaman': 'Persetujuan Atasan Langsung'}
     return render(request, 'daftar_persetujuan.html', context)
 
 @login_required
 def detail_persetujuan(request, pk):
+    """Menampilkan detail satu pengajuan untuk ditinjau atasan."""
     pengajuan = get_object_or_404(PengajuanCuti, pk=pk, atasan_penyetuju=request.user)
     context = {'pengajuan': pengajuan}
     return render(request, 'detail_persetujuan.html', context)
 
 @login_required
 def proses_persetujuan(request, pk):
+    """Memproses keputusan (setuju/tolak) dari atasan."""
     if request.method != 'POST':
         return redirect('dashboard')
     
@@ -193,26 +176,24 @@ def proses_persetujuan(request, pk):
     pengajuan.save()
     return redirect('daftar_persetujuan')
 
-# ==================== VIEW PERSETUJUAN KEPALA ====================
+# ==================== ALUR PERSETUJUAN KEPALA KANTOR ====================
 
 @login_required
 @kepala_kantor_required
 def daftar_persetujuan_kepala(request):
+    """Menampilkan daftar pengajuan yang menunggu keputusan final dari Kepala Kantor."""
     daftar_tugas = PengajuanCuti.objects.filter(status='PENDING_KEPALA').order_by('created_at')
     
     if not daftar_tugas.exists():
         messages.info(request, "Saat ini tidak ada pengajuan cuti yang menunggu keputusan Kepala Kantor.")
     
-    context = {
-        'daftar_tugas': daftar_tugas, 
-        'judul_halaman': 'Persetujuan Kepala Kantor',
-        'peran': 'Kepala'
-    }
+    context = {'daftar_tugas': daftar_tugas, 'judul_halaman': 'Persetujuan Kepala Kantor', 'peran': 'Kepala'}
     return render(request, 'daftar_persetujuan.html', context)
 
 @login_required
 @kepala_kantor_required
 def detail_persetujuan_kepala(request, pk):
+    """Menampilkan detail satu pengajuan untuk ditinjau Kepala Kantor."""
     pengajuan = get_object_or_404(PengajuanCuti, pk=pk, status__in=['PENDING_KEPALA', 'DISETUJUI', 'DITOLAK_KEPALA'])
     context = {'pengajuan': pengajuan, 'peran': 'Kepala'}
     return render(request, 'detail_persetujuan.html', context)
@@ -220,6 +201,7 @@ def detail_persetujuan_kepala(request, pk):
 @login_required
 @kepala_kantor_required
 def proses_persetujuan_kepala(request, pk):
+    """Memproses keputusan final (setuju/tolak) dari Kepala Kantor."""
     if request.method != 'POST':
         return redirect('dashboard')
         
@@ -251,13 +233,16 @@ def proses_persetujuan_kepala(request, pk):
 
 @login_required
 def riwayat_detail(request, pk):
+    """Menampilkan detail pengajuan untuk pegawai yang bersangkutan."""
     pengajuan = get_object_or_404(PengajuanCuti, pk=pk, pegawai=request.user)
     context = {'pengajuan': pengajuan}
     return render(request, 'riwayat_detail.html', context)
 
 @login_required
 def cetak_surat_cuti(request, pk):
+    """Menampilkan halaman HTML yang siap untuk dicetak."""
     pengajuan = get_object_or_404(PengajuanCuti, pk=pk, status='DISETUJUI')
+    # Logika otorisasi untuk memastikan hanya pihak berwenang yang bisa mencetak
     is_pemilik = pengajuan.pegawai == request.user
     is_atasan = pengajuan.atasan_penyetuju == request.user if pengajuan.atasan_penyetuju else False
     is_kepala = request.user.groups.filter(name='Kepala Kantor').exists()
@@ -281,6 +266,7 @@ def cetak_surat_cuti(request, pk):
     return render(request, 'cetak_surat_cuti.html', context)
 
 def hitung_lama_cuti_ajax(request):
+    """Menghitung hari kerja antara dua tanggal untuk ditampilkan di form."""
     start_date_str = request.GET.get('start_date')
     end_date_str = request.GET.get('end_date')
     if start_date_str and end_date_str:
