@@ -34,6 +34,8 @@ class User(AbstractUser):
     username = None 
     nip = models.CharField(max_length=18, unique=True, verbose_name="NIP")
 
+    wajib_ganti_password = models.BooleanField(default=True)
+
     USERNAME_FIELD = 'nip' 
     REQUIRED_FIELDS = ['first_name', 'last_name']
     
@@ -43,6 +45,10 @@ class User(AbstractUser):
     # 'self' di sini adalah objek User, jadi kita bisa langsung memanggil metodenya.
     def __str__(self):
         return self.get_full_name() or self.nip
+    
+    class Meta:
+        verbose_name = "Pengguna"
+        verbose_name_plural = "Daftar Pengguna"
     # =========================================================================
 
 

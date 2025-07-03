@@ -111,3 +111,27 @@ def edit_profile(request):
         'pass_form': pass_form,
     }
     return render(request, 'profile.html', context)
+
+@login_required
+def ganti_password_pertama_kali(request):
+    if not request.user.wajib_ganti_password:
+        return redirect('dashboard') # Jika sudah ganti, arahkan ke dashboard
+
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            # Tandai bahwa user sudah tidak wajib ganti password lagi
+            user.wajib_ganti_password = False
+            user.save()
+            # Penting! Update session agar user tidak logout setelah ganti password
+            update_session_auth_hash(request, user)  
+            messages.success(request, 'Password Anda telah berhasil diubah! Silakan lanjutkan.')
+            return redirect('dashboard')
+        else:
+            messages.error(request, 'Terjadi kesalahan. Mohon periksa kembali isian Anda.')
+    else:
+        form = PasswordChangeForm(request.user)
+        messages.warning(request, 'Untuk keamanan, Anda wajib mengganti password awal Anda.')
+    
+    return render(request, 'ganti_password.html', {'form': form})

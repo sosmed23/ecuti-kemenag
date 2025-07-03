@@ -16,4 +16,5 @@ urlpatterns = [
     # URL untuk dashboard pegawai
     path('dashboard/', views.dashboard, name='dashboard'),
     path('profile/', views.edit_profile, name='edit_profile'),
+    path('ganti-password/', views.ganti_password_pertama_kali, name='ganti_password'),
 ]
