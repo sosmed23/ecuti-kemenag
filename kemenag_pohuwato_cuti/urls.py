@@ -1,10 +1,9 @@
 # File: kemenag_pohuwato_cuti/urls.py
-# PERBAIKAN FINAL: Memastikan semua URL terhubung dengan benar
 
 from django.contrib import admin
 from django.urls import path, include
-from django.conf import settings             # <-- Impor baru
-from django.conf.urls.static import static # <-- Impor baru
+from django.conf import settings
+from django.conf.urls.static import static
 
 # ==================== KODE KUSTOMISASI ADMIN ====================
 admin.site.site_header = "Admin E-Cuti Kemenag Pohuwato"
@@ -20,13 +19,15 @@ urlpatterns = [
     # Contoh: /cuti/ajukan/, /cuti/persetujuan/
     path('cuti/', include('cuti.urls')),
     
+    # (Opsional) Jika Anda punya aplikasi laporan terpisah
+    # path('laporan/', include('laporan.urls')),
+    
     # Semua URL yang tidak cocok dengan pola di atas (termasuk halaman utama)
     # akan ditangani oleh aplikasi 'users'.
     # Ini membuat /login, /logout, dan /dashboard bisa diakses dari root.
-    # Dan halaman utama http://127.0.0.1:8000/ akan otomatis mengarah ke login.
-    path('laporan/', include('laporan.urls')),
     path('', include('users.urls')),
 ]
 
+# Konfigurasi untuk menampilkan file media saat development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
