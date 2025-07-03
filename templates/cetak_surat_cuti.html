@@ -75,6 +75,9 @@
         }
         .signature-space { 
             height: 50px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .signature-name { 
             font-weight: normal; 
@@ -175,8 +178,9 @@
         <div class="signature-block">
             <p>Hormat Saya,</p>
             <div class="signature-space">
+                <!-- PERBAIKAN: Menggunakan .url untuk menampilkan gambar -->
                 {% if pengajuan.tanda_tangan_pemohon %}
-                    <img src="{{ pengajuan.tanda_tangan_pemohon.path }}" style="height: 40px;">
+                    <img src="{{ pengajuan.tanda_tangan_pemohon.url }}" style="height: 40px;">
                 {% endif %}
             </div>
             <p class="signature-name">{{ pengajuan.pegawai.get_full_name }}</p>
@@ -197,7 +201,12 @@
             <tr><td colspan="4" style="height: 60px;">&nbsp;</td></tr>
         </table>
         <div class="signature-block">
-            <div class="signature-space"></div>
+            <div class="signature-space">
+                <!-- PENAMBAHAN: Menampilkan tanda tangan atasan -->
+                {% if pengajuan.tanda_tangan_atasan %}
+                    <img src="{{ pengajuan.tanda_tangan_atasan.url }}" style="height: 40px;">
+                {% endif %}
+            </div>
             <p class="signature-name">{{ pengajuan.atasan_penyetuju.get_full_name|default_if_none:"....................................." }}</p>
             <p class="signature-nip">NIP. {{ pengajuan.atasan_penyetuju.nip|default_if_none:"....................................." }}</p>
         </div>
@@ -216,7 +225,12 @@
             <tr><td colspan="4" style="height: 60px;">&nbsp;</td></tr>
         </table>
         <div class="signature-block">
-            <div class="signature-space"></div>
+            <div class="signature-space">
+                <!-- PENAMBAHAN: Menampilkan tanda tangan kepala -->
+                {% if pengajuan.tanda_tangan_kepala %}
+                    <img src="{{ pengajuan.tanda_tangan_kepala.url }}" style="height: 40px;">
+                {% endif %}
+            </div>
             <p class="signature-name">{{ pengajuan.kepala_penyetuju.get_full_name|default_if_none:"....................................." }}</p>
             <p class="signature-nip">NIP. {{ pengajuan.kepala_penyetuju.nip|default_if_none:"....................................." }}</p>
         </div>
