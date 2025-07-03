@@ -155,12 +155,15 @@ def konfirmasi_pengajuan(request):
     return render(request, 'konfirmasi_pengajuan.html', context)
 
 
-# ==================== VIEW LAINNYA ====================
+# ==================== VIEW PERSETUJUAN ATASAN ====================
 
 @login_required
 def daftar_persetujuan(request):
     daftar_tugas = PengajuanCuti.objects.filter(atasan_penyetuju=request.user, status='PENDING_ATASAN').order_by('created_at')
-    context = {'daftar_tugas': daftar_tugas}
+    context = {
+        'daftar_tugas': daftar_tugas,
+        'judul_halaman': 'Persetujuan Atasan Langsung'
+    }
     return render(request, 'daftar_persetujuan.html', context)
 
 @login_required
@@ -182,19 +185,29 @@ def proses_persetujuan(request, pk):
 
     if aksi == 'setujui':
         pengajuan.status = 'PENDING_KEPALA'
-        messages.success(request, f"Pengajuan cuti untuk {pengajuan.pegawai.get_full_name()} telah diteruskan ke Kepala.")
+        messages.success(request, f"Pengajuan cuti a.n. {pengajuan.pegawai.get_full_name()} telah disetujui dan diteruskan ke Kepala Kantor.")
     elif aksi == 'tolak':
         pengajuan.status = 'DITOLAK_ATASAN'
-        messages.error(request, f"Pengajuan cuti untuk {pengajuan.pegawai.get_full_name()} telah ditolak.")
+        messages.error(request, f"Pengajuan cuti a.n. {pengajuan.pegawai.get_full_name()} telah ditolak.")
         
     pengajuan.save()
     return redirect('daftar_persetujuan')
+
+# ==================== VIEW PERSETUJUAN KEPALA ====================
 
 @login_required
 @kepala_kantor_required
 def daftar_persetujuan_kepala(request):
     daftar_tugas = PengajuanCuti.objects.filter(status='PENDING_KEPALA').order_by('created_at')
-    context = {'daftar_tugas': daftar_tugas, 'peran': 'Kepala'}
+    
+    if not daftar_tugas.exists():
+        messages.info(request, "Saat ini tidak ada pengajuan cuti yang menunggu keputusan Kepala Kantor.")
+    
+    context = {
+        'daftar_tugas': daftar_tugas, 
+        'judul_halaman': 'Persetujuan Kepala Kantor',
+        'peran': 'Kepala'
+    }
     return render(request, 'daftar_persetujuan.html', context)
 
 @login_required
@@ -233,6 +246,8 @@ def proses_persetujuan_kepala(request, pk):
         
     pengajuan.save()
     return redirect('daftar_persetujuan_kepala')
+
+# ==================== VIEW LAINNYA ====================
 
 @login_required
 def riwayat_detail(request, pk):
