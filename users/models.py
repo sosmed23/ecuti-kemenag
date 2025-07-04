@@ -34,7 +34,7 @@ class User(AbstractUser):
     username = None 
     nip = models.CharField(max_length=18, unique=True, verbose_name="NIP")
 
-    wajib_ganti_password = models.BooleanField(default=True)
+    # wajib_ganti_password = models.BooleanField(default=True)
 
     USERNAME_FIELD = 'nip' 
     REQUIRED_FIELDS = ['first_name', 'last_name']
