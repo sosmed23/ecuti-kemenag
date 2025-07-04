@@ -5,12 +5,6 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
-# ==================== KODE KUSTOMISASI ADMIN ====================
-admin.site.site_header = "Admin E-Cuti Kemenag Pohuwato"
-admin.site.site_title = "Portal Admin E-Cuti"
-admin.site.index_title = "Selamat Datang di Portal Admin E-Cuti"
-# =============================================================
-
 urlpatterns = [
     # URL untuk Halaman Admin Django
     path('admin/', admin.site.urls),
@@ -18,9 +12,6 @@ urlpatterns = [
     # Semua URL yang berawalan 'cuti/' akan ditangani oleh aplikasi 'cuti'
     # Contoh: /cuti/ajukan/, /cuti/persetujuan/
     path('cuti/', include('cuti.urls')),
-    
-    # (Opsional) Jika Anda punya aplikasi laporan terpisah
-    # path('laporan/', include('laporan.urls')),
     
     # Semua URL yang tidak cocok dengan pola di atas (termasuk halaman utama)
     # akan ditangani oleh aplikasi 'users'.
