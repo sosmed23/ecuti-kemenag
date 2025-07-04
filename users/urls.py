@@ -18,5 +18,5 @@ urlpatterns = [
     path('profile/', views.edit_profile, name='edit_profile'),
     
     # URL untuk halaman ganti password
-    path('ganti-password/', views.ganti_password_pertama_kali, name='ganti_password'),
+    # path('ganti-password/', views.ganti_password_pertama_kali, name='ganti_password'),
 ]
