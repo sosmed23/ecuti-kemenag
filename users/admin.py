@@ -61,11 +61,21 @@ class CustomUserAdmin(UserAdmin):
         return obj.get_full_name()
     get_full_name_custom.short_description = 'Nama Pegawai'
 
-    # === FUNGSI get_inlines DIHAPUS DARI SINI ===
-    # Dengan menghapusnya, ProfileInline akan muncul di halaman 'add user' dan 'change user'
+    # === FUNGSI get_inlines DIKEMBALIKAN ===
+    # Ini untuk mencegah form Profile muncul saat menambah user baru.
+    def get_inlines(self, request, obj=None):
+        if not obj:
+            return []
+        return super().get_inlines(request, obj)
+
+    # === FUNGSI BARU UNTUK MEMBUAT PROFILE OTOMATIS ===
+    # Ini akan membuat Profile kosong setiap kali User baru disimpan.
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if not change: # 'change' adalah False jika ini adalah objek baru
+            Profile.objects.create(user=obj)
 
 
 # Register model lainnya
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(Jabatan)
-
