@@ -78,6 +78,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            font-style: italic;
+            color: #555;
         }
         .signature-name { 
             font-weight: normal; 
@@ -178,9 +180,9 @@
         <div class="signature-block">
             <p>Hormat Saya,</p>
             <div class="signature-space">
-                <!-- PERBAIKAN: Menggunakan .url untuk menampilkan gambar -->
+                <!-- PERBAIKAN: Mengganti gambar dengan teks "(TTD)" -->
                 {% if pengajuan.tanda_tangan_pemohon %}
-                    <img src="{{ pengajuan.tanda_tangan_pemohon.url }}" style="height: 40px;">
+                    <p>(TTD)</p>
                 {% endif %}
             </div>
             <p class="signature-name">{{ pengajuan.pegawai.get_full_name }}</p>
@@ -202,9 +204,9 @@
         </table>
         <div class="signature-block">
             <div class="signature-space">
-                <!-- PENAMBAHAN: Menampilkan tanda tangan atasan -->
+                <!-- PENAMBAHAN: Menampilkan teks "(TTD)" untuk atasan -->
                 {% if pengajuan.tanda_tangan_atasan %}
-                    <img src="{{ pengajuan.tanda_tangan_atasan.url }}" style="height: 40px;">
+                     <p>(TTD)</p>
                 {% endif %}
             </div>
             <p class="signature-name">{{ pengajuan.atasan_penyetuju.get_full_name|default_if_none:"....................................." }}</p>
@@ -226,9 +228,9 @@
         </table>
         <div class="signature-block">
             <div class="signature-space">
-                <!-- PENAMBAHAN: Menampilkan tanda tangan kepala -->
+                <!-- PENAMBAHAN: Menampilkan teks "(TTD)" untuk kepala -->
                 {% if pengajuan.tanda_tangan_kepala %}
-                    <img src="{{ pengajuan.tanda_tangan_kepala.url }}" style="height: 40px;">
+                     <p>(TTD)</p>
                 {% endif %}
             </div>
             <p class="signature-name">{{ pengajuan.kepala_penyetuju.get_full_name|default_if_none:"....................................." }}</p>

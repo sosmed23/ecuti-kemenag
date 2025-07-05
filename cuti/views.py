@@ -4,8 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
-from django.http import JsonResponse, HttpResponse
-from django.template.loader import get_template
+from django.http import JsonResponse
 from datetime import datetime
 import base64
 from django.core.files.base import ContentFile
@@ -52,6 +51,32 @@ def kepala_kantor_required(function):
             return redirect('dashboard')
     return wrap
 
+# ==================== VIEW UTAMA ====================
+
+@login_required
+def dashboard(request):
+    """Menampilkan halaman utama setelah login."""
+    tahun_sekarang = timezone.now().year
+    
+    # Mengambil data sisa cuti tahunan
+    sisa_cuti_2025 = SaldoCutiTahunan.objects.filter(pegawai=request.user, tahun=2025).first()
+    sisa_cuti_2024 = SaldoCutiTahunan.objects.filter(pegawai=request.user, tahun=2024).first()
+    
+    # Mengambil data profil untuk cuti lainnya
+    profil_pegawai, created = Profile.objects.get_or_create(user=request.user)
+
+    # Mengambil riwayat pengajuan terakhir
+    riwayat_pengajuan = PengajuanCuti.objects.filter(pegawai=request.user).order_by('-created_at')[:5]
+
+    context = {
+        'sisa_cuti_2025': sisa_cuti_2025.sisa_hari if sisa_cuti_2025 else 0,
+        'sisa_cuti_2024': sisa_cuti_2024.sisa_hari if sisa_cuti_2024 else 0,
+        'profil': profil_pegawai,
+        'riwayat_pengajuan': riwayat_pengajuan,
+        'active_page': 'dashboard'
+    }
+    return render(request, 'dashboard.html', context)
+
 # ==================== ALUR PENGAJUAN CUTI OLEH PEGAWAI ====================
 
 @login_required
@@ -60,7 +85,6 @@ def ajukan_cuti(request):
     if request.method == 'POST':
         form = PengajuanCutiForm(request.POST, request.FILES, request=request)
         if form.is_valid():
-            # Simpan data sementara di session, jangan simpan ke database dulu
             request.session['pengajuan_data'] = {
                 'jenis_cuti_id': form.cleaned_data['jenis_cuti'].id,
                 'tanggal_mulai': form.cleaned_data['tanggal_mulai'].isoformat(),
@@ -111,7 +135,7 @@ def konfirmasi_pengajuan(request):
         try:
             format, imgstr = tanda_tangan_data_url.split(';base64,')
             ext = format.split('/')[-1]
-            file_name = f"tt_pemohon_{request.user.username}_{int(timezone.now().timestamp())}.{ext}"
+            file_name = f"tt_pemohon_{request.user.nip}_{int(timezone.now().timestamp())}.{ext}"
             data = ContentFile(base64.b64decode(imgstr), name=file_name)
             pengajuan.tanda_tangan_pemohon = data
         except (ValueError, TypeError):
@@ -122,7 +146,9 @@ def konfirmasi_pengajuan(request):
             profile_pegawai = Profile.objects.get(user=request.user)
             if profile_pegawai.atasan_langsung:
                 pengajuan.status = 'PENDING_ATASAN'
+                # === PERBAIKAN: Ambil objek .user dari atasan_langsung ===
                 pengajuan.atasan_penyetuju = profile_pegawai.atasan_langsung.user
+                # ==========================================================
             else:
                 pengajuan.status = 'PENDING_KEPALA'
         except Profile.DoesNotExist:
@@ -143,21 +169,18 @@ def konfirmasi_pengajuan(request):
 
 @login_required
 def daftar_persetujuan(request):
-    """Menampilkan daftar pengajuan yang menunggu persetujuan atasan yang sedang login."""
     daftar_tugas = PengajuanCuti.objects.filter(atasan_penyetuju=request.user, status='PENDING_ATASAN').order_by('created_at')
     context = {'daftar_tugas': daftar_tugas, 'judul_halaman': 'Persetujuan Atasan Langsung'}
     return render(request, 'daftar_persetujuan.html', context)
 
 @login_required
 def detail_persetujuan(request, pk):
-    """Menampilkan detail satu pengajuan untuk ditinjau atasan."""
     pengajuan = get_object_or_404(PengajuanCuti, pk=pk, atasan_penyetuju=request.user)
     context = {'pengajuan': pengajuan}
     return render(request, 'detail_persetujuan.html', context)
 
 @login_required
 def proses_persetujuan(request, pk):
-    """Memproses keputusan (setuju/tolak) dari atasan."""
     if request.method != 'POST':
         return redirect('dashboard')
     
@@ -182,7 +205,6 @@ def proses_persetujuan(request, pk):
 @login_required
 @kepala_kantor_required
 def daftar_persetujuan_kepala(request):
-    """Menampilkan daftar pengajuan yang menunggu keputusan final dari Kepala Kantor."""
     daftar_tugas = PengajuanCuti.objects.filter(status='PENDING_KEPALA').order_by('created_at')
     
     if not daftar_tugas.exists():
@@ -194,7 +216,6 @@ def daftar_persetujuan_kepala(request):
 @login_required
 @kepala_kantor_required
 def detail_persetujuan_kepala(request, pk):
-    """Menampilkan detail satu pengajuan untuk ditinjau Kepala Kantor."""
     pengajuan = get_object_or_404(PengajuanCuti, pk=pk, status__in=['PENDING_KEPALA', 'DISETUJUI', 'DITOLAK_KEPALA'])
     context = {'pengajuan': pengajuan, 'peran': 'Kepala'}
     return render(request, 'detail_persetujuan.html', context)
@@ -202,27 +223,50 @@ def detail_persetujuan_kepala(request, pk):
 @login_required
 @kepala_kantor_required
 def proses_persetujuan_kepala(request, pk):
-    """Memproses keputusan final (setuju/tolak) dari Kepala Kantor."""
     if request.method != 'POST':
         return redirect('dashboard')
         
     pengajuan = get_object_or_404(PengajuanCuti, pk=pk)
     aksi = request.POST.get('aksi')
     catatan = request.POST.get('catatan_kepala', '')
+    
     pengajuan.catatan_kepala = catatan
     pengajuan.tanggal_keputusan_kepala = timezone.now()
     pengajuan.kepala_penyetuju = request.user
 
     if aksi == 'setujui':
         pengajuan.status = 'DISETUJUI'
-        if pengajuan.jenis_cuti.kode == 'CT':
-            sukses, pesan = potong_saldo_cuti_tahunan(pengajuan.pegawai, pengajuan.lama_cuti)
-            if sukses:
-                messages.success(request, f"Pengajuan cuti disetujui. {pesan}")
+        
+        pegawai = pengajuan.pegawai
+        lama_cuti = pengajuan.lama_cuti
+        jenis_cuti_kode = pengajuan.jenis_cuti.kode
+
+        try:
+            if jenis_cuti_kode == 'CT':
+                sukses, pesan = potong_saldo_cuti_tahunan(pegawai, lama_cuti)
+                if sukses:
+                    messages.success(request, f"Pengajuan Cuti Tahunan disetujui. {pesan}")
+                else:
+                    messages.warning(request, f"Pengajuan disetujui, namun saldo bermasalah: {pesan}")
             else:
-                messages.warning(request, f"Pengajuan disetujui, namun saldo bermasalah: {pesan}")
-        else:
-            messages.success(request, f"Pengajuan cuti untuk {pengajuan.pegawai.get_full_name()} telah DISETUJUI.")
+                profil_pegawai = pegawai.profile
+                pesan = f"Pengajuan cuti untuk {pegawai.get_full_name()} telah DISETUJUI."
+                if jenis_cuti_kode == 'CS':
+                    profil_pegawai.sisa_cuti_sakit -= lama_cuti
+                    pesan = f"Jatah Cuti Sakit a.n. {pegawai.get_full_name()} dikurangi {lama_cuti} hari."
+                elif jenis_cuti_kode == 'CM':
+                    profil_pegawai.sisa_cuti_melahirkan -= lama_cuti
+                    pesan = f"Jatah Cuti Melahirkan a.n. {pegawai.get_full_name()} dikurangi {lama_cuti} hari."
+                elif jenis_cuti_kode == 'CAP':
+                    profil_pegawai.sisa_cuti_alasan_penting -= lama_cuti
+                    pesan = f"Jatah Cuti Alasan Penting a.n. {pegawai.get_full_name()} dikurangi {lama_cuti} hari."
+                
+                profil_pegawai.save()
+                messages.success(request, pesan)
+
+        except Exception as e:
+            messages.error(request, f"Terjadi kesalahan saat memotong saldo cuti: {e}")
+            
     elif aksi == 'tolak':
         pengajuan.status = 'DITOLAK_KEPALA'
         messages.error(request, f"Pengajuan cuti untuk {pengajuan.pegawai.get_full_name()} telah DITOLAK.")
@@ -234,16 +278,13 @@ def proses_persetujuan_kepala(request, pk):
 
 @login_required
 def riwayat_detail(request, pk):
-    """Menampilkan detail pengajuan untuk pegawai yang bersangkutan."""
     pengajuan = get_object_or_404(PengajuanCuti, pk=pk, pegawai=request.user)
     context = {'pengajuan': pengajuan}
     return render(request, 'riwayat_detail.html', context)
 
 @login_required
 def cetak_surat_cuti(request, pk):
-    """Menampilkan halaman HTML yang siap untuk dicetak."""
     pengajuan = get_object_or_404(PengajuanCuti, pk=pk, status='DISETUJUI')
-    # Logika otorisasi untuk memastikan hanya pihak berwenang yang bisa mencetak
     is_pemilik = pengajuan.pegawai == request.user
     is_atasan = pengajuan.atasan_penyetuju == request.user if pengajuan.atasan_penyetuju else False
     is_kepala = request.user.groups.filter(name='Kepala Kantor').exists()
@@ -267,7 +308,6 @@ def cetak_surat_cuti(request, pk):
     return render(request, 'cetak_surat_cuti.html', context)
 
 def hitung_lama_cuti_ajax(request):
-    """Menghitung hari kerja antara dua tanggal untuk ditampilkan di form."""
     start_date_str = request.GET.get('start_date')
     end_date_str = request.GET.get('end_date')
     if start_date_str and end_date_str:
@@ -282,16 +322,13 @@ def hitung_lama_cuti_ajax(request):
 
 @login_required
 def laporan_cuti(request):
-    # Mulai dengan mengambil semua objek pengajuan
     pengajuan_list = PengajuanCuti.objects.all().select_related('pegawai', 'jenis_cuti')
 
-    # --- Filter berdasarkan input dari form GET ---
-    pegawai_id = request.GET.get('pegawai', '') # Gunakan '' sebagai default
+    pegawai_id = request.GET.get('pegawai', '')
     jenis_cuti_id = request.GET.get('jenis_cuti', '')
     start_date = request.GET.get('start_date', '')
     end_date = request.GET.get('end_date', '')
 
-    # Hanya jalankan filter jika ada nilainya (tidak kosong)
     if pegawai_id:
         pengajuan_list = pengajuan_list.filter(pegawai_id=pegawai_id)
     if jenis_cuti_id:
@@ -301,7 +338,6 @@ def laporan_cuti(request):
     if end_date:
         pengajuan_list = pengajuan_list.filter(tanggal_selesai__lte=end_date)
     
-    # Menambahkan data sisa cuti ke setiap pengajuan
     tahun_sekarang = timezone.now().year
     sisa_cuti_subquery = SaldoCutiTahunan.objects.filter(
         pegawai=OuterRef('pegawai'),

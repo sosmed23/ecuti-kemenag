@@ -28,7 +28,7 @@
             <!-- === TOMBOL CETAK BARU === -->
             {% if pengajuan.status == 'DISETUJUI' %}
                 <a href="{% url 'cetak_surat_cuti' pk=pengajuan.pk %}" target="_blank" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg text-sm">
-                Cetak PDF
+                Cetak Form
                 </a>
             {% endif %}
         </div>

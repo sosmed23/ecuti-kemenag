@@ -18,4 +18,5 @@ urlpatterns = [
     path('surat/<int:pk>/cetak/', views.cetak_surat_cuti, name='cetak_surat_cuti'),
     path('ajukan/konfirmasi/', views.konfirmasi_pengajuan, name='konfirmasi_pengajuan'),
     path('ajax/hitung-cuti/', views.hitung_lama_cuti_ajax, name='hitung_cuti_ajax'),
+    path('laporan/', views.laporan_cuti, name='laporan_cuti'),
 ]
