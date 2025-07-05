@@ -1,18 +1,17 @@
 # File: users/admin.py
-# PERBARUAN: Menambahkan halaman admin khusus untuk Profile
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import User, Profile, Jabatan
-from .forms import CustomUserCreationForm, CustomUserChangeForm
+# Pastikan Anda mengimpor form kustom jika menggunakannya
+# from .forms import CustomUserCreationForm, CustomUserChangeForm
 
 # --- Admin untuk Profile (Akan muncul sebagai menu terpisah) ---
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = ('get_full_name', 'jabatan', 'status_kepegawaian', 'sisa_cuti_sakit', 'sisa_cuti_melahirkan', 'sisa_cuti_alasan_penting')
+    list_display = ('get_full_name', 'jabatan', 'status_kepegawaian')
     search_fields = ('user__nip', 'user__first_name', 'user__last_name')
     list_select_related = ('user', 'jabatan')
-    list_editable = ('sisa_cuti_sakit', 'sisa_cuti_melahirkan', 'sisa_cuti_alasan_penting')
     list_filter = ('status_kepegawaian', 'jabatan')
 
     def get_full_name(self, obj):
@@ -25,46 +24,46 @@ class ProfileInline(admin.StackedInline):
     can_delete = False
     verbose_name_plural = 'Profile Pegawai'
     fk_name = 'user'
-    fieldsets = (
-        (None, {
-            'fields': ('jabatan', 'status_kepegawaian', 'atasan_langsung', 'no_telepon')
-        }),
-        ('Informasi Kepegawaian', {
-            'fields': ('masa_kerja_tahun', 'masa_kerja_bulan')
-        }),
-        ('Saldo Cuti Tambahan', {
-            'fields': ('sisa_cuti_sakit', 'sisa_cuti_melahirkan', 'sisa_cuti_alasan_penting')
-        }),
-    )
+    # Mengatur field yang akan ditampilkan di inline form
+    fields = ('jabatan', 'status_kepegawaian', 'atasan_langsung', 'no_telepon', 'masa_kerja_tahun', 'masa_kerja_bulan')
+
 
 class CustomUserAdmin(UserAdmin):
-    add_form = CustomUserCreationForm
-    form = CustomUserChangeForm
+    # add_form = CustomUserCreationForm
+    # form = CustomUserChangeForm
     model = User
     
     ordering = ('nip',)
+    # Menampilkan formulir Profile di dalam halaman User
     inlines = (ProfileInline, )
-    list_display = ('get_full_name', 'nip', 'is_staff')
     
+    list_display = ('get_full_name_custom', 'nip', 'is_staff')
+    list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups')
+    search_fields = ('nip', 'first_name', 'last_name')
+
+    # Mengatur tampilan field di halaman 'change user'
     fieldsets = (
         (None, {'fields': ('nip', 'password')}),
         ('Personal info', {'fields': ('first_name', 'last_name', 'email')}),
-        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups')}),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
     
+    # Mengatur tampilan field di halaman 'add user'
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
             'fields': ('nip', 'first_name', 'last_name', 'password', 'password2'),
         }),
     )
-    search_fields = ('nip', 'first_name', 'last_name')
+    
+    def get_full_name_custom(self, obj):
+        return obj.get_full_name()
+    get_full_name_custom.short_description = 'Nama Pegawai'
 
-    def get_inlines(self, request, obj=None):
-        if not obj:
-            return []
-        return (ProfileInline,)
+    # === FUNGSI get_inlines DIHAPUS DARI SINI ===
+    # Dengan menghapusnya, ProfileInline akan muncul di halaman 'add user' dan 'change user'
+
 
 # Register model lainnya
 admin.site.register(User, CustomUserAdmin)
