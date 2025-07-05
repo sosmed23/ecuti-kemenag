@@ -20,8 +20,9 @@ ALLOWED_HOSTS = ['127.0.0.1']
 HEROKU_APP_NAME = os.environ.get('HEROKU_APP_NAME')
 if HEROKU_APP_NAME:
     ALLOWED_HOSTS.append(f"{HEROKU_APP_NAME}.herokuapp.com")
+
     ALLOWED_HOSTS.append('www.nebeng.web.id')
-    ALLOWED_HOSTS.append('sicuti.nebeng.web.id')
+    ALLOWED_HOSTS.append('cutiku.nebeng.web.id')
     ALLOWED_HOSTS.append('nebeng.web.id')
 
 INSTALLED_APPS = [
