@@ -22,7 +22,7 @@ if HEROKU_APP_NAME:
     ALLOWED_HOSTS.append(f"{HEROKU_APP_NAME}.herokuapp.com")
     ALLOWED_HOSTS.append('www.nebeng.web.id')
     ALLOWED_HOSTS.append('sicuti.nebeng.web.id')
-    
+    ALLOWED_HOSTS.append('nebeng.web.id')
 
 INSTALLED_APPS = [
     'whitenoise.runserver_nostatic', # Harus di atas
